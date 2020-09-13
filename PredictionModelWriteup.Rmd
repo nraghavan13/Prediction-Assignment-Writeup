@@ -1,0 +1,71 @@
+---
+title: "Prediction Model Writeup"
+author: "Niyati Raghavan"
+date: "09/13/2020"
+output: html_document
+---
+
+### Overview
+
+A model will be generated for the large amount of data about personal activity. The goal is to create a model with respect to the exercise performed using "classe" variable based on the training set.
+
+### Data Processing
+
+The training data for this project:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data for this project:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv 
+
+The training and test datasets are loaded and further parsed such that the empty values and near zero variance are removed. 
+
+```{r, echo=TRUE}
+library("caret")
+library(randomForest)
+
+TrainingDataURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+TestDataURL  <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+training_data <- read.csv(url(TrainingDataURL), strip.white = TRUE, na.strings = c("NA",""))
+test_data  <- read.csv(url(TestDataURL),  strip.white = TRUE, na.strings = c("NA",""))
+
+training_data<-training_data[,colSums(is.na(training_data)) == 0]
+test_data <-test_data[,colSums(is.na(test_data)) == 0]
+```
+
+### Model
+
+Cross Validation is performed and the partition the training set into training and validation subsets. In general two partitions are created, with 70% and 30% for the original training set. The training parition will be used for modeling.
+
+```{r, echo = TRUE}
+training_data <- training_data[ , -c(1:6)]
+test_data  <- test_data[ , -c(1:6)]
+
+set.seed(10000)
+
+# 70/30 model where, 70% to train and 30% to test out errors
+partition_values <- createDataPartition(y=training_data$classe, p=0.70,list=FALSE)    
+train_vals <- training_data[partition_values, ]
+test_vals <- training_data[-partition_values, ] 
+
+```
+
+The Random Forest is used to model the training set/ Additionally, a confusion matrix is used to quantify the model.
+
+Using this model, yields an overall accuracy is 99.85%. This is a highly accurate result indicates lower errors.
+
+```{r, echo=TRUE}
+model_rf <- randomForest(classe ~ ., data=train_vals, method="class", na.action=na.exclude)
+predict_rf <- predict(model_rf, test_vals, type = "class")
+
+confusionMatrix(test_vals$classe, predict_rf)
+```
+
+### Test Model
+
+The model performed using random forest is used for the test data with the 20 entries.
+
+```{r, echo=TRUE}
+test_data_results <- predict(model_rf, test_data, type="class")
+test_data_results
+```
